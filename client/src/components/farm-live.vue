@@ -1,88 +1,116 @@
 <template>
-  <van-config-provider theme="light">
-    <van-layout class="farm-layout">
-      <van-header class="farm-header" style="background:#149D56;color:#fff;">
-        <span class="farm-title">农场直播</span>
-      </van-header>
-      <van-content class="farm-content">
-        <div class="banner-box">
-          <img src="/img/live_1.jpg" class="banner-img" alt="banner" />
+  <div class="farm-app">
+    <!-- 顶部标题 -->
+    <div class="farm-header">
+      <span class="farm-title">农场直播</span>
+    </div>
+
+    <!-- 固定的直播画面 -->
+    <div class="banner-box">
+      <img :src="`/img/${currentLive.url}`" class="banner-img" :alt="currentLive.name" />
+      <div class="live-info">
+        <span class="live-title">{{ currentLive.name }}</span>
+        <span class="live-status">LIVE</span>
+      </div>
+    </div>    <!-- Tab 区域 -->
+    <van-tabs v-model:active="activeTab" sticky swipeable animated class="main-tabs">
+      <!-- 直播频道 -->
+      <van-tab title="直播频道">
+        <div class="grid-list">
+          <div v-for="cam in cameras" :key="cam.id" 
+               class="grid-item" 
+               :class="{ active: currentLive.id === cam.id }"
+               @click="selectCamera(cam)">
+            <img :src="`/img/${cam.url}`" class="grid-img" />
+            <div class="grid-title">{{ cam.name }}</div>
+          </div>
         </div>
-        <van-tabs v-model:active="activeTab" color="#149D56" line-width="30px" line-height="3px" class="main-tabs" animated swipeable>
-          <van-tab title="直播频道" name="channel">
-            <div class="grid-list">
-              <div v-for="cam in cameras" :key="cam.id" class="grid-item" @click="selectCamera(cam)">
-                <img :src="`/img/${cam.url}`" class="grid-img" />
-                <div class="grid-title">{{ cam.name }}</div>
-              </div>
+      </van-tab>
+
+      <!-- 农场互动 -->
+      <van-tab title="农场互动" class="chat-tab">
+        <div class="comment-list">
+          <div v-for="(c, i) in comments" :key="i" class="comment-item">
+            <span class="comment-user">{{ c.user }}：</span>{{ c.text }}
+          </div>
+        </div>
+        <div class="comment-input">
+          <van-field v-model="input" 
+                    placeholder="说点什么吧..." 
+                    border 
+                    clearable
+                    @keyup.enter="sendComment" />
+          <van-button type="primary" size="normal" @click="sendComment">发送</van-button>
+        </div>
+      </van-tab>      <!-- 农场详情 -->
+      <van-tab title="农场详情">
+        <div class="section-title">农场天气</div>
+        <div class="weather-card">
+          <div class="weather-row">
+            <span class="weather-location">海安市</span>
+          </div>
+          <div class="weather-main">
+            <span class="weather-temp">-26</span>
+            <span class="weather-unit">℃ 雪</span>
+          </div>
+          <div class="weather-info">
+            <span>湿度：69%</span>
+            <span>风速：东南风2级</span>
+          </div>
+        </div>
+
+        <div class="section-title">农场介绍</div>
+        <div class="farm-intro">
+          <div class="intro-content">
+            破局·共生·跃迁——2025企业出海投融资论坛暨"苏美达天下"八周年。今天将为大家带来T1 vs WBG的精彩对决。观迎观看英雄联盟S13总决赛直播！今天将为大家带来T1 vs WBG上限150字介绍！宇教上限150字介绍！
+          </div>
+          <div class="intro-meta">
+            <div>分类：<span>商业聚会</span></div>
+            <div>开播时间：<span>05月31日 09:41</span></div>
+            <div>时长：<span>3小时</span></div>
+            <div class="tag-list">
+              <span class="tag">#英雄联盟</span>
+              <span class="tag">#S13总决赛</span>
+              <span class="tag">#T1</span>
+              <span class="tag">#电竞</span>
             </div>
-          </van-tab>
-          <van-tab title="农场互动" name="chat">
-            <div class="comment-list">
-              <div v-for="(c, i) in comments" :key="i" class="comment-item">
-                <span class="comment-user">{{ c.user }}：</span>{{ c.text }}
-              </div>
-            </div>
-            <div class="comment-input">
-              <van-field v-model="input" placeholder="说点什么吧..." border clearable />
-              <van-button type="primary" size="small" @click="sendComment">发送</van-button>
-            </div>
-          </van-tab>
-          <van-tab title="农场详情" name="info">
-            <div class="weather-card">
-              <div class="weather-row">
-                <span class="weather-city">当前天气</span>
-                <span class="weather-location">海安市</span>
-              </div>
-              <div class="weather-main">
-                <span class="weather-icon">❄️</span>
-                <span class="weather-temp">-26</span>
-                <span class="weather-unit">℃ 雪</span>
-              </div>
-              <div class="weather-info">
-                <span>湿度: 69%</span>
-                <span>风速: 东南风2级</span>
-              </div>
-            </div>
-            <div class="farm-intro">
-              <div class="intro-title">农场介绍</div>
-              <div class="intro-content">
-                破局·共生·跃迁——2025企业出海投融资论坛暨“苏美达天下”八周年<br />
-                欢迎观看英雄联盟S13总决赛直播！今天将为大家带来T1 vs WBG的精彩对决。欢迎观看英雄联盟S13总决赛直播！字数上限150字符！
-              </div>
-              <div class="intro-meta">
-                <div>分类：<span class="tag">商业聚会</span></div>
-                <div>开播时间：<span>05月31日 09:41</span></div>
-                <div>时长：<span>3小时</span></div>
-                <div class="tag-list">
-                  <span class="tag">#英雄联盟</span>
-                  <span class="tag">#S13总决赛</span>
-                  <span class="tag">#T1</span>
-                </div>
-              </div>
-            </div>
-            <van-button type="primary" block class="contact-btn" @click="contactOwner">联系农场主</van-button>
-          </van-tab>
-        </van-tabs>
-      </van-content>
-    </van-layout>
-  </van-config-provider>
+          </div>
+        </div>
+        <van-button type="primary" block class="contact-btn" @click="contactOwner">联系农场主</van-button>
+      </van-tab>
+    </van-tabs>
+  </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { showToast } from 'vant'
 
-const activeTab = ref('channel')
+// 当前选中的tab
+const activeTab = ref(0)
+
+// 当前直播间信息
+const currentLive = ref({
+  id: 1,
+  name: '东区农田',
+  url: 'live_1.jpg'
+})
+
+// 可切换的直播间列表
 const cameras = ref([
   { id: 1, name: '东区农田', url: 'live_2.jpg' },
   { id: 2, name: '西区果园', url: 'live_3.jpg' },
   { id: 3, name: '南区蔬菜', url: 'live_4.jpg' },
   { id: 4, name: '北区果林', url: 'live_5.jpg' }
 ])
+
+// 切换直播间
 const selectCamera = (cam) => {
+  currentLive.value = cam
   showToast(`切换到：${cam.name}`)
 }
+
+// 评论列表
 const comments = ref([
   { user: '清风徐来', text: '哈哈哈哈哈哈' },
   { user: '干饭人干饭魂', text: '加油啊！' },
@@ -92,6 +120,8 @@ const comments = ref([
   { user: '书虫的世界', text: '我觉得你说的对' },
   { user: '剧荒少年在线', text: '分享了直播间' },
 ])
+
+// 发送评论
 const input = ref('')
 const sendComment = () => {
   if (!input.value.trim()) {
@@ -100,18 +130,46 @@ const sendComment = () => {
   }
   comments.value.push({ user: '我', text: input.value })
   input.value = ''
+  showToast('发送成功')
 }
+
+// 联系农场主
 const contactOwner = () => {
   window.open('weixin://')
 }
 </script>
 
-<style scoped>
-.farm-layout {
-  min-height: 100vh;
-  background: #f2f3f5;
+<style>
+:root {
+  --van-primary-color: #149D56;
 }
+
+/* 全局设置 MiSans 字体 */
+body {
+  font-family: 'MiSans', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* Vant 组件字体覆盖 */
+:deep(.van-button),
+:deep(.van-field__control),
+:deep(.van-tab),
+:deep(.van-toast) {
+  font-family: 'MiSans', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
+}
+</style>
+
+<style scoped>
+.farm-app {
+  min-height: 100vh;
+  background: #fff;
+  font-family: 'MiSans', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
 .farm-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 48px;
   display: flex;
   align-items: center;
@@ -119,185 +177,250 @@ const contactOwner = () => {
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 2px;
-  background: #149D56;
-  border-radius: 0 0 8px 8px;
+  background: #fff;
+  color: #149D56;
+  z-index: 3;
 }
-.farm-title {
-  color: #fff;
-}
-.farm-content {
-  padding: 0;
-  background: #f2f3f5;
-}
+
 .banner-box {
+  position: sticky;
+  top: 48px;
   width: 100%;
   aspect-ratio: 16/9;
-  background: #fff;
-  overflow: hidden;
-  border-radius: 0 0 8px 8px;
+  background: #000;
+  z-index: 3;
 }
+
 .banner-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-.main-tabs {
-  background: #f2f3f5;
+
+.live-info {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 12px;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-.van-tabs__nav {
+
+/* Tab栏样式 */
+.main-tabs {
+  height: calc(100vh - 48px - 56vw);
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.van-tabs__wrap) {
+  position: sticky;
+  top: calc(48px + 56vw);
+  z-index: 2;
+  background: #fff;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+:deep(.van-tabs__content) {
+  flex: 1;
   background: #fff;
 }
-.van-tabs__line {
-  background: #149D56;
-  border-radius: 8px;
-}
+
+/* 直播列表样式 */
 .grid-list {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 16px 10px 0 10px;
-}
-.grid-item {
+  gap: 12px;
+  padding: 12px;
   background: #fff;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  cursor: pointer;
-  padding: 0 0 8px 0;
 }
+
+.grid-item {
+  width: 100%;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.grid-item.active {
+  border: 1px solid #149D56;
+}
+
 .grid-img {
   width: 100%;
   aspect-ratio: 16/9;
   object-fit: cover;
-  border-radius: 8px 8px 0 0;
-  margin-bottom: 4px;
 }
+
 .grid-title {
-  font-size: 15px;
+  font-size: 14px;
   color: #333;
-  margin-left: 8px;
-  margin-top: 2px;
+  padding: 8px;
+  text-align: left;
 }
-.comment-list {
-  max-height: 320px;
-  overflow: auto;
-  background: #fff;
-  border-radius: 8px;
-  margin: 16px 10px 8px 10px;
-  padding: 8px 0;
-}
-.comment-item {
-  margin: 4px 12px;
-  font-size: 15px;
-  line-height: 1.8;
-  color: #222;
+
+/* 农场互动样式 */
+.chat-tab {
+  height: 100%;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  position: relative;
 }
+
+.comment-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  padding-bottom: 64px;
+}
+
+.comment-item {
+  margin: 4px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+  text-align: left;
+}
+
 .comment-user {
   color: #149D56;
   margin-right: 4px;
   font-weight: 500;
 }
+
 .comment-input {
-  margin: 8px 10px 0 10px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   gap: 8px;
-  align-items: center;
+  padding: 8px 12px;
   background: #fff;
-  border-radius: 8px;
-  padding: 4px 8px;
+  border-top: 1px solid #f5f5f5;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: center;
 }
+
 .comment-input .van-field {
-  flex: 1;
-  background: transparent;
+    flex: 1;
+    border: solid 1px #e0e0e0;
+    border-radius: 8px;
 }
+
 .comment-input .van-button {
-  min-width: 60px;
-  background: #149D56;
-  border-radius: 8px;
-  border: none;
+  flex-shrink: 0;
+  height: 36px;
 }
+
+/* 农场详情样式 */
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  padding: 16px 12px 4px;
+  text-align: left;
+}
+
 .weather-card {
-  background: linear-gradient(135deg, #e0f7fa 60%, #fff 100%);
+  width: 100%;
+  background: rgb(235, 245, 255);
   border-radius: 8px;
-  margin: 16px 10px 12px 10px;
-  padding: 16px 16px 12px 16px;
+  padding: 16px;
+  margin: 0 12px 16px;
+  box-sizing: border-box;
 }
+
 .weather-row {
   display: flex;
-  justify-content: space-between;
-  font-size: 15px;
-  color: #149D56;
-  margin-bottom: 6px;
+  justify-content: flex-start;
+  font-size: 14px;
+  margin-bottom: 8px;
 }
+
+.weather-location {
+  color: #333;
+  font-weight: 500;
+}
+
 .weather-main {
   display: flex;
-  align-items: baseline;
-  font-size: 28px;
-  color: #149D56;
-  margin-bottom: 6px;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0;
 }
-.weather-icon {
-  font-size: 32px;
-  margin-right: 8px;
-}
+
 .weather-temp {
-  font-size: 32px;
-  font-weight: bold;
-  margin-right: 4px;
+  font-size: 36px;
+  font-weight: 600;
+  color: #333;
 }
+
 .weather-unit {
-  font-size: 16px;
-  color: #888;
+  font-size: 14px;
+  color: #666;
 }
+
 .weather-info {
-  font-size: 13px;
-  color: #888;
   display: flex;
   gap: 16px;
-}
-.farm-intro {
-  background: #fff;
-  border-radius: 8px;
-  margin: 12px 10px 8px 10px;
-  padding: 14px 12px 10px 12px;
-}
-.intro-title {
-  color: #149D56;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-.intro-content {
-  color: #222;
-  font-size: 15px;
-  margin-bottom: 10px;
-  line-height: 1.7;
-}
-.intro-meta {
-  font-size: 13px;
-  color: #888;
-  margin-top: 6px;
-}
-.tag-list {
-  margin-top: 4px;
-}
-.tag {
-  display: inline-block;
-  background: #e0f7fa;
-  color: #149D56;
-  border-radius: 8px;
-  padding: 2px 8px;
-  margin-right: 6px;
+  color: #666;
   font-size: 12px;
 }
+
+.farm-intro {
+  margin: 0 12px;
+  background: #fff;
+}
+
+.intro-content {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.intro-meta {
+  font-size: 12px;
+  color: #666;
+  text-align: left;
+  
+  > div {
+    margin-bottom: 8px;
+  }
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  color: #666;
+  font-size: 12px;
+}
+
 .contact-btn {
-  margin: 18px 10px 0 10px;
-  font-size: 16px;
+  display: block;
+  width: calc(100% - 24px);
+  margin: 16px auto;
+  height: 44px;
   border-radius: 8px;
-  background: #149D56;
-  border: none;
+  font-size: 16px;
+  font-weight: 500;
 }
 </style>
