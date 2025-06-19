@@ -3,15 +3,18 @@
     <!-- 顶部标题 -->
     <div class="farm-header">
       <span class="farm-title">农场直播</span>
-    </div>
-
-    <!-- 固定的直播画面 -->
+    </div>    <!-- 固定的直播画面 -->
     <div class="banner-box">
-      <img :src="`/img/${currentLive.url}`" class="banner-img" :alt="currentLive.name" />
-      <div class="live-info">
-        <span class="live-title">{{ currentLive.name }}</span>
-        <span class="live-status">LIVE</span>
-      </div>
+      <template v-if="loading">
+        <van-skeleton title :row="3" :loading="loading" class="banner-skeleton" />
+      </template>
+      <template v-else>
+        <img :src="`/img/${currentLive.url}`" class="banner-img" :alt="currentLive.name" />
+        <div class="live-info">
+          <span class="live-title">{{ currentLive.name }}</span>
+          <span class="live-status">LIVE</span>
+        </div>
+      </template>
     </div>    <!-- Tab 区域 -->
     <van-tabs v-model:active="activeTab" sticky swipeable animated class="main-tabs">
       <!-- 直播频道 -->
@@ -44,50 +47,63 @@
         </div>
       </van-tab>      <!-- 农场详情 -->
       <van-tab title="农场详情">
-        <div class="section-title">农场天气</div>
-        <div class="weather-card">
-          <div class="weather-row">
-            <span class="weather-location">海安市</span>
-          </div>
-          <div class="weather-main">
-            <span class="weather-temp">-26</span>
-            <span class="weather-unit">℃ 雪</span>
-          </div>
-          <div class="weather-info">
-            <span>湿度：69%</span>
-            <span>风速：东南风2级</span>
-          </div>
-        </div>
+        <div class="farm-detail">
+          <div class="farm-detail-content">
+            <div class="section-title">农场天气</div>
+            <div class="weather-card">
+              <div class="weather-row">
+                <span class="weather-location">扶风县</span>
+              </div>
+              <div class="weather-main">
+                <span class="weather-temp">31</span>
+                <span class="weather-unit">℃ 晴</span>
+              </div>
+              <div class="weather-info">
+                <span>湿度：69%</span>
+                <span>风速：东南风2级</span>
+              </div>
+            </div>
 
-        <div class="section-title">农场介绍</div>
-        <div class="farm-intro">
-          <div class="intro-content">
-            破局·共生·跃迁——2025企业出海投融资论坛暨"苏美达天下"八周年。今天将为大家带来T1 vs WBG的精彩对决。观迎观看英雄联盟S13总决赛直播！今天将为大家带来T1 vs WBG上限150字介绍！宇教上限150字介绍！
-          </div>
-          <div class="intro-meta">
-            <div>分类：<span>商业聚会</span></div>
-            <div>开播时间：<span>05月31日 09:41</span></div>
-            <div>时长：<span>3小时</span></div>
-            <div class="tag-list">
-              <span class="tag">#英雄联盟</span>
-              <span class="tag">#S13总决赛</span>
-              <span class="tag">#T1</span>
-              <span class="tag">#电竞</span>
+            <div class="section-title">农场介绍</div>
+            <div class="farm-intro">
+              <div class="intro-content">
+                破局·共生·跃迁——2025企业出海投融资论坛暨"苏美达天下"八周年。今天将为大家带来T1 vs WBG的精彩对决。观迎观看英雄联盟S13总决赛直播！今天将为大家带来T1 vs WBG上限150字介绍！宇教上限150字介绍！
+              </div>
+              <div class="intro-meta">
+                <div>分类：<span>商业聚会</span></div>
+                <div>开播时间：<span>05月31日 09:41</span></div>
+                <div>时长：<span>3小时</span></div>
+                <div class="tag-list">
+                  <span class="tag">#英雄联盟</span>
+                  <span class="tag">#S13总决赛</span>
+                  <span class="tag">#T1</span>
+                  <span class="tag">#电竞</span>
+                </div>
+              </div>
             </div>
           </div>
+          <div class="farm-detail-footer">
+            <van-button type="primary" block class="contact-btn" @click="contactOwner">联系农场主</van-button>
+          </div>
         </div>
-        <van-button type="primary" block class="contact-btn" @click="contactOwner">联系农场主</van-button>
       </van-tab>
     </van-tabs>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { showToast } from 'vant'
+import { ref, onMounted } from 'vue'
+import { showToast, showLoadingToast, Skeleton } from 'vant'
+
+// 加载状态
+const loading = ref(true)
 
 // 当前选中的tab
 const activeTab = ref(0)
+
+// 防刷屏控制
+const lastCommentTime = ref(0)
+const COMMENT_COOLDOWN = 30 * 1000 // 30秒冷却时间
 
 // 当前直播间信息
 const currentLive = ref({
@@ -119,6 +135,13 @@ const comments = ref([
   { user: '星辰大海梦', text: '点赞了直播' },
   { user: '书虫的世界', text: '我觉得你说的对' },
   { user: '剧荒少年在线', text: '分享了直播间' },
+  { user: '清风徐来', text: '哈哈哈哈哈哈' },
+  { user: '干饭人干饭魂', text: '加油啊！' },
+  { user: '元气满满蓝', text: '这个直播几点结束？' },
+  { user: 'StarLight', text: '老师，请问PPT可以发一下学习一下吗？' },
+  { user: '星辰大海梦', text: '点赞了直播' },
+  { user: '书虫的世界', text: '我觉得你说的对' },
+  { user: '剧荒少年在线', text: '分享了直播间' },
 ])
 
 // 发送评论
@@ -128,6 +151,19 @@ const sendComment = () => {
     showToast('请输入内容')
     return
   }
+
+  // 检查发言间隔
+  const now = Date.now()
+  const timeLeft = COMMENT_COOLDOWN - (now - lastCommentTime.value)
+  if (timeLeft > 0) {
+    showToast(`发言太快了，请等待 ${Math.ceil(timeLeft / 1000)} 秒`)
+    return
+  }
+
+  // 更新最后发言时间
+  lastCommentTime.value = now
+  
+  // 发送评论
   comments.value.push({ user: '我', text: input.value })
   input.value = ''
   showToast('发送成功')
@@ -137,6 +173,21 @@ const sendComment = () => {
 const contactOwner = () => {
   window.open('weixin://')
 }
+
+// 模拟加载数据
+onMounted(async () => {
+  const loadToast = showLoadingToast({
+    message: '加载中...',
+    forbidClick: true,
+  })
+  
+  // 模拟网络请求延迟
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  
+  // 关闭加载提示
+  loadToast.close()
+  loading.value = false
+})
 </script>
 
 <style>
@@ -228,7 +279,19 @@ body {
 
 :deep(.van-tabs__content) {
   flex: 1;
+  overflow: hidden;
   background: #fff;
+  position: relative;
+}
+
+:deep(.van-tab__pane) {
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+:deep(.van-tab__pane-wrapper) {
+  height: 100%;
 }
 
 /* 直播列表样式 */
@@ -267,17 +330,13 @@ body {
 
 /* 农场互动样式 */
 .chat-tab {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
   position: relative;
+  min-height: 100%;
+  padding-bottom: 60px;
 }
 
 .comment-list {
-  flex: 1;
-  overflow-y: auto;
   padding: 12px;
-  padding-bottom: 64px;
 }
 
 .comment-item {
@@ -330,7 +389,6 @@ body {
 }
 
 .weather-card {
-  width: 100%;
   background: rgb(235, 245, 255);
   border-radius: 8px;
   padding: 16px;
@@ -375,6 +433,31 @@ body {
   font-size: 12px;
 }
 
+/* 农场详情页面布局 */
+.farm-detail {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.farm-detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 80px;
+}
+
+.farm-detail-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 12px;
+  background: #fff;
+  border-top: 1px solid #f5f5f5;
+  z-index: 2;
+}
+
 .farm-intro {
   margin: 0 12px;
   background: #fff;
@@ -415,12 +498,34 @@ body {
 }
 
 .contact-btn {
-  display: block;
-  width: calc(100% - 24px);
-  margin: 16px auto;
+  width: 100%;
   height: 44px;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
+}
+
+/* 骨架屏样式 */
+.banner-skeleton {
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.banner-skeleton :deep(.van-skeleton__row) {
+    height: 24px !important;
+    margin: 12px 0 !important;
+}
+
+.banner-skeleton :deep(.van-skeleton__title) {
+    width: 50% !important;
+    height: 32px !important;
+}
+
+:deep(.van-skeleton) {
+  padding: 16px;
+  border-radius: 8px;
+  background: #f5f5f5;
 }
 </style>
