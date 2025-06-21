@@ -42,14 +42,6 @@
               <span class="comment-user">{{ c.user }}：</span>{{ c.text }}
             </div>
           </div>
-          <div class="comment-input">
-            <van-field v-model="input" 
-                      placeholder="说点什么吧..." 
-                      border 
-                      clearable
-                      @keyup.enter="sendComment" />
-            <van-button type="primary" size="normal" @click="sendComment">发送</van-button>
-          </div>
         </div>
         <div v-show="activeTab === 2" class="farm-detail">
           <div class="farm-detail-content">
@@ -57,21 +49,22 @@
             <div class="weather-card">
               <div class="weather-row">
                 <span class="weather-location">扶风县</span>
+                <span class="weather-date">{{ new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) }}</span>
               </div>
               <div class="weather-main">
-                <span class="weather-temp">31</span>
-                <span class="weather-unit">℃ 晴</span>
+                <span class="weather-temp">{{ weather.temp }}</span>
+                <span class="weather-unit">℃</span>
               </div>
               <div class="weather-info">
-                <span>湿度：69%</span>
-                <span>风速：东南风2级</span>
+                <span>湿度：{{ weather.humidity }}%</span>
+                <span>风：{{ weather.wind }}</span>
               </div>
             </div>
 
             <div class="section-title">农场介绍</div>
             <div class="farm-intro">
               <div class="intro-content">
-                破局·共生·跃迁——2025企业出海投融资论坛暨"苏美达天下"八周年。今天将为大家带来T1 vs WBG的精彩对决。观迎观看英雄联盟S13总决赛直播！今天将为大家带来T1 vs WBG上限150字介绍！宇教上限150字介绍！
+                扶风县有机生态农场成立于2018年，占地面积500亩。我们坚持"自然农法、环保循环"的理念，采用传统与科技结合的种植方式。目前主要种植当季有机蔬菜，养殖土鸡500只，生态鱼塘3个。我们采用太阳能供电系统，雨水收集灌溉技术，形成了完整的生态循环体系。欢迎各界朋友参观交流！
               </div>
               <div class="intro-meta">
                 <div>分类：<span>商业聚会</span></div>
@@ -86,11 +79,19 @@
               </div>
             </div>
           </div>
-          <div class="farm-detail-footer">
-            <van-button type="primary" block class="contact-btn" @click="contactOwner">联系农场主</van-button>
-          </div>
         </div>
       </div>
+      <!-- 底部输入和按钮区域 -->
+      <comment-input
+        v-if="activeTab === 1"
+        v-model:value="input"
+        :cooldown="checkCommentCooldown()"
+        @send="sendComment"
+      />
+      <farm-detail-footer
+        v-if="activeTab === 2"
+        @contact="contactOwner"
+      />
     </section>
   </div>
 </template>
@@ -99,6 +100,8 @@
 import { ref, onMounted } from 'vue'
 import { showToast, showLoadingToast } from 'vant'
 import { liveData } from '../data/live-data.js'
+import CommentInput from './comment-input.vue'
+import FarmDetailFooter from './farm-detail-footer.vue'
 
 // 加载状态
 const loading = ref(true)
@@ -138,6 +141,31 @@ const comments = ref([
   { user: '书虫的世界', text: '我觉得你说的对' },
   { user: '剧荒少年在线', text: '分享了直播间' },
 ])
+
+// 天气数据
+const weather = ref({
+  temp: '--',
+  text: '--',
+  humidity: '--',
+  wind: '--'
+})
+
+// 获取天气（彩云天气API）
+const fetchWeather = async () => {
+  try {
+    const res = await fetch('/api/weather')
+    const data = await res.json()
+    if (data && data.result && data.result.realtime) {
+      const rt = data.result.realtime
+      weather.value.temp = rt.temperature || '--'
+      weather.value.text = rt.skycon || '--'
+      weather.value.humidity = rt.humidity ? Math.round(rt.humidity * 100) : '--'
+      weather.value.wind = rt.wind ? `${rt.wind.speed}m/s` : '--'
+    }
+  } catch (e) {
+    weather.value = { temp: '--', text: '获取失败', humidity: '--', wind: '--' }
+  }
+}
 
 // 检查评论冷却时间
 const checkCommentCooldown = () => {
@@ -181,6 +209,7 @@ onMounted(async () => {
   await new Promise(resolve => setTimeout(resolve, 1000))
   loadToast.close()
   loading.value = false
+  await fetchWeather()
 })
 
 // Tab 标题
@@ -337,13 +366,6 @@ body {
   text-align: left;
 }
 
-/* 农场互动样式 */
-.chat-tab {
-  position: relative;
-  min-height: 100%;
-  padding-bottom: 60px;
-}
-
 .comment-list {
   padding: 12px;
 }
@@ -362,32 +384,6 @@ body {
   font-weight: 500;
 }
 
-.comment-input {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #fff;
-  border-top: 1px solid #f5f5f5;
-  width: 100%;
-  box-sizing: border-box;
-  align-items: center;
-}
-
-.comment-input .van-field {
-    flex: 1;
-    border: solid 1px #e0e0e0;
-    border-radius: 8px;
-}
-
-.comment-input .van-button {
-  flex-shrink: 0;
-  height: 36px;
-}
-
 /* 农场详情样式 */
 .section-title {
   font-size: 16px;
@@ -398,7 +394,7 @@ body {
 }
 
 .weather-card {
-  background: rgb(235, 245, 255);
+  background: linear-gradient(135deg, #ebf5ff 0%, #ebfff7 100%);
   border-radius: 8px;
   padding: 16px;
   margin: 0 12px 16px;
@@ -417,6 +413,13 @@ body {
   font-weight: 500;
 }
 
+.weather-date {
+  margin-left: auto;
+  font-size: 13px;
+  color: #888;
+  font-weight: 400;
+}
+
 .weather-main {
   display: flex;
   align-items: center;
@@ -425,7 +428,7 @@ body {
 }
 
 .weather-temp {
-  font-size: 36px;
+  font-size: 24px;
   font-weight: 600;
   color: #333;
 }
@@ -454,17 +457,6 @@ body {
   flex: 1;
   overflow-y: auto;
   padding-bottom: 80px;
-}
-
-.farm-detail-footer {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 8px 12px;
-  background: #fff;
-  border-top: 1px solid #f5f5f5;
-  z-index: 2;
 }
 
 .farm-intro {
@@ -545,12 +537,13 @@ body {
   background: #fff;
   padding: 12px 12px 0 12px;
   border-bottom: 1px solid #f5f5f5;
-  /*width: 100%;*/
 }
+
 .custom-tabbar-inner {
   display: flex;
   gap: 32px;
 }
+
 .custom-tabbar-item {
   display: inline-block;
   min-width: 48px;
@@ -562,10 +555,12 @@ body {
   transition: color 0.2s;
   position: relative;
 }
+
 .custom-tabbar-item.active {
   color: #149D56;
   font-weight: bold;
 }
+
 .custom-tabbar-item.active::after {
   content: '';
   display: block;
@@ -575,5 +570,18 @@ body {
   height: 2px;
   background: #149D56;
   border-radius: 1px;
+}
+
+:deep(.van-cell) {
+  border: .5px solid #e0e0e0;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+:deep(.van-button) {
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 16px;
+  height: 44px;
+
 }
 </style>
