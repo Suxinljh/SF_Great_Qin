@@ -1,53 +1,57 @@
 <template>
   <div class="farm-app">
     <!-- 顶部标题 -->
-    <div class="farm-header">
+    <header class="farm-header">
       <span class="farm-title">农场直播</span>
-    </div>    <!-- 固定的直播画面 -->
-    <div class="banner-box">
+    </header>    <!-- 固定的直播画面 -->
+    <section class="banner-box">
       <template v-if="loading">
         <van-skeleton title :row="3" :loading="loading" class="banner-skeleton" />
       </template>
       <template v-else>
-        <img :src="`/img/${currentLive.url}`" class="banner-img" :alt="currentLive.name" />
+        <img :src="`/img/${currentLive.url}`" class="banner-img" :alt="currentLive.name" loading="lazy" />
         <div class="live-info">
           <span class="live-title">{{ currentLive.name }}</span>
           <span class="live-status">LIVE</span>
         </div>
       </template>
-    </div>    <!-- Tab 区域 -->
-    <van-tabs v-model:active="activeTab" sticky swipeable animated class="main-tabs">
-      <!-- 直播频道 -->
-      <van-tab title="直播频道">
-        <div class="grid-list">
-          <div v-for="cam in cameras" :key="cam.id" 
-               class="grid-item" 
-               :class="{ active: currentLive.id === cam.id }"
-               @click="selectCamera(cam)">
-            <img :src="`/img/${cam.url}`" class="grid-img" />
-            <div class="grid-title">{{ cam.name }}</div>
+    </section>    <!-- Tab 区域 -->
+    <section class="main-tabs-container">
+      <div class="custom-tabbar">
+        <div class="custom-tabbar-inner">
+          <div v-for="(tab, idx) in tabTitles" :key="idx" class="custom-tabbar-item" :class="{active: activeTab === idx}" @click="activeTab = idx">
+            {{ tab }}
           </div>
         </div>
-      </van-tab>
-
-      <!-- 农场互动 -->
-      <van-tab title="农场互动" class="chat-tab">
-        <div class="comment-list">
-          <div v-for="(c, i) in comments" :key="i" class="comment-item">
-            <span class="comment-user">{{ c.user }}：</span>{{ c.text }}
+      </div>
+      <div class="main-tabs">
+        <div v-show="activeTab === 0" class="main-scroll-area">
+          <div class="grid-list">
+            <div v-for="cam in cameras" :key="cam.id" 
+                 class="grid-item" 
+                 :class="{ active: currentLive.id === cam.id }"
+                 @click="selectCamera(cam)">
+              <img :src="`/img/${cam.url}`" class="grid-img" loading="lazy" />
+              <div class="grid-title">{{ cam.name }}</div>
+            </div>
           </div>
         </div>
-        <div class="comment-input">
-          <van-field v-model="input" 
-                    placeholder="说点什么吧..." 
-                    border 
-                    clearable
-                    @keyup.enter="sendComment" />
-          <van-button type="primary" size="normal" @click="sendComment">发送</van-button>
+        <div v-show="activeTab === 1" class="main-scroll-area">
+          <div class="comment-list">
+            <div v-for="(c, i) in comments" :key="i" class="comment-item">
+              <span class="comment-user">{{ c.user }}：</span>{{ c.text }}
+            </div>
+          </div>
+          <div class="comment-input">
+            <van-field v-model="input" 
+                      placeholder="说点什么吧..." 
+                      border 
+                      clearable
+                      @keyup.enter="sendComment" />
+            <van-button type="primary" size="normal" @click="sendComment">发送</van-button>
+          </div>
         </div>
-      </van-tab>      <!-- 农场详情 -->
-      <van-tab title="农场详情">
-        <div class="farm-detail">
+        <div v-show="activeTab === 2" class="farm-detail">
           <div class="farm-detail-content">
             <div class="section-title">农场天气</div>
             <div class="weather-card">
@@ -86,14 +90,15 @@
             <van-button type="primary" block class="contact-btn" @click="contactOwner">联系农场主</van-button>
           </div>
         </div>
-      </van-tab>
-    </van-tabs>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { showToast, showLoadingToast, Skeleton } from 'vant'
+import { showToast, showLoadingToast } from 'vant'
+import { liveData } from '../data/live-data.js'
 
 // 加载状态
 const loading = ref(true)
@@ -106,19 +111,9 @@ const lastCommentTime = ref(0)
 const COMMENT_COOLDOWN = 30 * 1000 // 30秒冷却时间
 
 // 当前直播间信息
-const currentLive = ref({
-  id: 1,
-  name: '东区农田',
-  url: 'live_1.jpg'
-})
-
+const currentLive = ref(liveData.default)
 // 可切换的直播间列表
-const cameras = ref([
-  { id: 1, name: '东区农田', url: 'live_2.jpg' },
-  { id: 2, name: '西区果园', url: 'live_3.jpg' },
-  { id: 3, name: '南区蔬菜', url: 'live_4.jpg' },
-  { id: 4, name: '北区果林', url: 'live_5.jpg' }
-])
+const cameras = ref(liveData.cameras)
 
 // 切换直播间
 const selectCamera = (cam) => {
@@ -144,6 +139,12 @@ const comments = ref([
   { user: '剧荒少年在线', text: '分享了直播间' },
 ])
 
+// 检查评论冷却时间
+const checkCommentCooldown = () => {
+  const now = Date.now()
+  return Math.max(0, Math.ceil((COMMENT_COOLDOWN - (now - lastCommentTime.value)) / 1000))
+}
+
 // 发送评论
 const input = ref('')
 const sendComment = () => {
@@ -151,18 +152,15 @@ const sendComment = () => {
     showToast('请输入内容')
     return
   }
-
-  // 检查发言间隔
   const now = Date.now()
+  // 检查发言间隔
   const timeLeft = COMMENT_COOLDOWN - (now - lastCommentTime.value)
   if (timeLeft > 0) {
     showToast(`发言太快了，请等待 ${Math.ceil(timeLeft / 1000)} 秒`)
     return
   }
-
   // 更新最后发言时间
   lastCommentTime.value = now
-  
   // 发送评论
   comments.value.push({ user: '我', text: input.value })
   input.value = ''
@@ -180,19 +178,18 @@ onMounted(async () => {
     message: '加载中...',
     forbidClick: true,
   })
-  
-  // 模拟网络请求延迟
   await new Promise(resolve => setTimeout(resolve, 1000))
-  
-  // 关闭加载提示
   loadToast.close()
   loading.value = false
 })
+
+// Tab 标题
+const tabTitles = ['直播频道', '农场互动', '农场详情']
 </script>
 
 <style>
 :root {
-  --van-primary-color: #149D56;
+  --van-primary-color: var(--primary-color);
 }
 
 /* 全局设置 MiSans 字体 */
@@ -209,10 +206,22 @@ body {
 }
 </style>
 
+<style>
+:root {
+  --primary-color: #149D56;
+  --bg-color: #fff;
+  --text-color: #333;
+  --border-color: #f5f5f5;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+}
+</style>
+
 <style scoped>
 .farm-app {
   min-height: 100vh;
-  background: #fff;
+  background: var(--bg-color);
   font-family: 'MiSans', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
@@ -274,7 +283,7 @@ body {
   top: calc(48px + 56vw);
   z-index: 2;
   background: #fff;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--border-color);
 }
 
 :deep(.van-tabs__content) {
@@ -305,14 +314,14 @@ body {
 
 .grid-item {
   width: 100%;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
 }
 
 .grid-item.active {
-  border: 1px solid #149D56;
+  border: 1px solid var(--primary-color);
 }
 
 .grid-img {
@@ -527,5 +536,44 @@ body {
   padding: 16px;
   border-radius: 8px;
   background: #f5f5f5;
+}
+
+.custom-tabbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+  padding: 12px 12px 0 12px;
+  border-bottom: 1px solid #f5f5f5;
+  /*width: 100%;*/
+}
+.custom-tabbar-inner {
+  display: flex;
+  gap: 32px;
+}
+.custom-tabbar-item {
+  display: inline-block;
+  min-width: 48px;
+  padding: 0 8px;
+  text-align: center;
+  font-size: 16px;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.2s;
+  position: relative;
+}
+.custom-tabbar-item.active {
+  color: #149D56;
+  font-weight: bold;
+}
+.custom-tabbar-item.active::after {
+  content: '';
+  display: block;
+  margin: 0 auto;
+  margin-top: 4px;
+  width: 32px;
+  height: 2px;
+  background: #149D56;
+  border-radius: 1px;
 }
 </style>
